@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NeatBook Toolkit - proof-of-concept demo</title>
+<meta name="description" content="Type an indicator, pick a tool, run it. An interactive demo of NeatBook, an early 2022 toolkit idea for security analysts. Browser-only, no extension source here.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="NeatBook Toolkit - every lookup one click away">
+<meta property="og:description" content="Interactive proof-of-concept: type an IP, domain, URL, hash or email and NeatBook picks the right lookup tools.">
+<meta property="og:image" content="https://tootenramen.github.io/NeatBook-Toolkit/docs/hero.png">
+<meta property="og:url" content="https://tootenramen.github.io/NeatBook-Toolkit/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="NeatBook Toolkit - every lookup one click away">
+<meta name="twitter:description" content="Interactive proof-of-concept: type an indicator, pick a tool, run it.">
+<meta name="twitter:image" content="https://tootenramen.github.io/NeatBook-Toolkit/docs/hero.png">
+<meta name="theme-color" content="#06070c">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%2322d3ee'/%3E%3Cpath d='M9 23V9h3l8 10V9h3v14h-3L12 13v10z' fill='%2306070c'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#06070c;--ink:#f2f4fa;--mute:#a9b3cb;--dim:#8a95b0;--line:rgba(255,255,255,.12);
+  --glass:rgba(255,255,255,.045);--v:#8b7bff;--c:#22d3ee;--p:#ff6fb1;--g:#34e3b0;--a:#ffb86b;
+  --acc:var(--c);
+  --grad:linear-gradient(100deg,#22d3ee 0%,#9d8cff 52%,#ff7ab8 100%);
+  --ease:cubic-bezier(.2,.8,.2,1);
+  --disp:'Space Grotesk',-apple-system,'Segoe UI',system-ui,sans-serif;
+  --body:'Inter',-apple-system,'Segoe UI',system-ui,sans-serif;
+  --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{overflow-x:hidden;scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 1rem/1.6 var(--body);overflow-x:hidden;-webkit-font-smoothing:antialiased}
+a{color:inherit}button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid #fff;outline-offset:2px;border-radius:8px;box-shadow:0 0 0 5px rgba(34,211,238,.5)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.aurora{position:fixed;inset:0;z-index:-1;overflow:hidden;background:radial-gradient(120% 80% at 50% -10%,#10122b 0%,#06070c 62%)}
+.blob{position:absolute;left:var(--x);top:var(--y);width:66vmax;height:66vmax;margin:-33vmax 0 0 -33vmax}
+.blob b{display:block;width:100%;height:100%;border-radius:50%;background:radial-gradient(circle,var(--col) 0,transparent 64%);filter:blur(60px);opacity:.26;animation:drift var(--t) ease-in-out infinite alternate}
+@keyframes drift{0%{transform:translate3d(-9%,-7%,0) scale(1) rotate(0)}100%{transform:translate3d(11%,9%,0) scale(1.2) rotate(50deg)}}
+.grain{position:absolute;inset:0;opacity:.035;mix-blend-mode:overlay;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E")}
+.nav{position:fixed;z-index:70;top:12px;left:50%;transform:translateX(-50%);max-width:calc(100% - 20px);display:flex;align-items:center;gap:4px;padding:5px;border-radius:999px;background:rgba(14,16,28,.62);border:1px solid var(--line);backdrop-filter:blur(18px) saturate(150%);-webkit-backdrop-filter:blur(18px) saturate(150%);box-shadow:0 10px 40px -10px #000}
+.nav .brand{height:40px;padding:0 16px;border-radius:999px;display:grid;place-items:center;font:700 .9rem var(--disp);letter-spacing:.02em;text-decoration:none;color:#07080d;background:var(--grad)}
+.nav a.l{display:block;white-space:nowrap;padding:9px 16px;border-radius:999px;font:500 .86rem var(--body);color:var(--mute);text-decoration:none;line-height:22px;transition:color .25s,background .25s}
+.nav a.l:hover{color:#fff;background:rgba(255,255,255,.11)}
+@media(max-width:560px){.nav a.l{padding:9px 10px;font-size:.78rem}.nav .brand{padding:0 12px}}
+.wrap{width:100%;max-width:1240px;margin:0 auto;padding:0 clamp(16px,5vw,48px)}
+.hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,520px);gap:clamp(28px,5vw,72px);align-items:center;padding:clamp(84px,11vh,110px) 0 40px;min-height:100vh}
+@media(max-width:960px){.hero{grid-template-columns:minmax(0,1fr);min-height:0;padding-top:92px}}
+.eyebrow{display:inline-flex;align-items:center;gap:10px;padding:7px 14px;border-radius:999px;font:500 .72rem var(--body);letter-spacing:.14em;text-transform:uppercase;color:#d3dbee;border:1px solid var(--line);background:var(--glass)}
+.eyebrow i{width:8px;height:8px;border-radius:50%;background:var(--g);box-shadow:0 0 12px var(--g);animation:pulse 2.4s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.35;transform:scale(.7)}}
+h1{margin:20px 0 0;font:700 clamp(2.4rem,5.6vw,4.6rem)/1.03 var(--disp);letter-spacing:-.04em;overflow-wrap:anywhere}
+.gw{display:inline-block;background:var(--grad);background-size:260% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;animation:shimmer 14s linear infinite;padding-bottom:.08em}
+@keyframes shimmer{to{background-position:-260% 0}}
+.lede{margin:22px 0 0;max-width:40ch;font:500 clamp(1.05rem,2vw,1.35rem)/1.45 var(--disp);color:#d9e0f0}
+.steps{display:flex;flex-wrap:wrap;gap:10px;margin:26px 0 0;padding:0;list-style:none}
+.steps li{display:flex;align-items:center;gap:10px;padding:9px 16px 9px 10px;border-radius:999px;border:1px solid var(--line);background:var(--glass);font:600 .9rem var(--body)}
+.steps b{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font:700 .78rem var(--disp);color:#06070c;background:var(--grad)}
+.poc{margin-top:22px;max-width:46ch;padding:12px 16px;border-radius:14px;border:1px dashed rgba(255,184,107,.5);background:rgba(255,184,107,.07);font-size:.84rem;color:#ffd9ad;line-height:1.5}
+.kb{display:inline-block;padding:1px 7px;border-radius:6px;border:1px solid var(--line);background:rgba(255,255,255,.08);font:600 .78rem var(--mono);color:#fff}
+
+/* popup */
+.stage{position:relative;min-width:0;scroll-margin-top:70px}
+.stage::before{content:"";position:absolute;inset:-6% -6% -6% -6%;background:radial-gradient(60% 50% at 50% 45%,rgba(34,211,238,.22),transparent 70%),radial-gradient(40% 40% at 80% 80%,rgba(255,122,184,.18),transparent 70%);filter:blur(30px);z-index:-1}
+.win{border-radius:18px;background:rgba(12,14,24,.8);border:1px solid rgba(255,255,255,.15);backdrop-filter:blur(26px) saturate(160%);-webkit-backdrop-filter:blur(26px) saturate(160%);box-shadow:0 40px 90px -30px #000,inset 0 1px 0 rgba(255,255,255,.1);overflow:hidden}
+.bar{display:flex;align-items:center;gap:8px;padding:11px 14px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.03)}
+.bar i{width:11px;height:11px;border-radius:50%;background:#ff5f57}.bar i:nth-child(2){background:#febc2e}.bar i:nth-child(3){background:#28c840}
+.bar span{flex:1;text-align:center;font:500 .76rem var(--body);color:var(--dim);margin-right:40px}
+.app{display:grid;grid-template-columns:62px minmax(0,1fr);height:min(680px,calc(100vh - 110px));min-height:560px}
+@media(max-width:960px){.app{height:auto;min-height:560px}}
+.side{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 0;border-right:1px solid var(--line);background:rgba(255,255,255,.025)}
+.side button{width:44px;height:44px;border-radius:14px;border:1px solid transparent;background:none;cursor:pointer;color:var(--dim);display:grid;place-items:center;transition:all .25s var(--ease)}
+.side button:hover{color:#fff;background:rgba(255,255,255,.08)}
+.side button[aria-selected=true]{color:#06070c;background:var(--grad);box-shadow:0 8px 24px -8px rgba(34,211,238,.7)}
+.side svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.side .sp{flex:1}
+.main{padding:18px;overflow:auto;min-width:0}
+.view[hidden]{display:none}
+.view h2{margin:0 0 4px;font:600 1.15rem var(--disp);letter-spacing:-.01em}
+.view p.sm{margin:0 0 14px;color:var(--mute);font-size:.84rem}
+.sbox{display:flex;gap:8px;align-items:center;padding:6px 6px 6px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.06);transition:border-color .25s,box-shadow .25s}
+.sbox:focus-within{border-color:var(--c);box-shadow:0 0 0 4px rgba(34,211,238,.18)}
+.sbox input{flex:1;min-width:0;background:none;border:0;outline:0;font:500 .95rem var(--mono);padding:8px 0}
+.sbox input:focus-visible{outline:0;box-shadow:none}
+.sbox input::placeholder{color:var(--dim)}
+.sbox kbd{font:600 .68rem var(--mono);color:var(--dim);border:1px solid var(--line);border-radius:6px;padding:2px 6px;white-space:nowrap}
+.row{display:flex;gap:8px;margin-top:10px;align-items:stretch}
+.sel{position:relative;flex:1;min-width:0}
+.sel select{width:100%;appearance:none;-webkit-appearance:none;height:42px;padding:0 36px 0 14px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.07);cursor:pointer;font:500 .9rem var(--body)}
+.sel select option{background:#12142a;color:#fff}
+.sel::after{content:"";position:absolute;right:14px;top:16px;width:7px;height:7px;border-right:2px solid var(--mute);border-bottom:2px solid var(--mute);transform:rotate(45deg);pointer-events:none}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;padding:0 20px;border-radius:999px;font:600 .88rem var(--body);cursor:pointer;border:1px solid var(--line);background:rgba(255,255,255,.08);color:#fff;text-decoration:none;transition:transform .25s var(--ease),box-shadow .3s}
+.btn:hover{transform:translateY(-1px);box-shadow:0 10px 30px -8px rgba(34,211,238,.5)}
+.btn.pri{color:#06070c;border-color:transparent;background:var(--grad)}
+.btn.sm{min-height:34px;padding:0 14px;font-size:.8rem}
+.btn[disabled],.btn[aria-disabled=true]{opacity:.45;pointer-events:none}
+.samples{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;align-items:center}
+.lbl{font:600 .68rem var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font:600 .72rem var(--body);border:1px solid var(--line);background:rgba(255,255,255,.06);color:#d6deef;white-space:nowrap;cursor:default}
+button.chip{cursor:pointer;font-family:var(--mono);font-weight:500}
+button.chip:hover{background:rgba(255,255,255,.14)}
+.chip.g{color:var(--g);border-color:rgba(52,227,176,.45);background:rgba(52,227,176,.1)}
+.chip.c{color:var(--c);border-color:rgba(34,211,238,.45);background:rgba(34,211,238,.1)}
+.chip.v{color:#b9afff;border-color:rgba(139,123,255,.5);background:rgba(139,123,255,.12)}
+.chip.a{color:var(--a);border-color:rgba(255,184,107,.45);background:rgba(255,184,107,.1)}
+.detect{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:14px;min-height:28px;font-size:.84rem;color:var(--mute)}
+.card{margin-top:12px;padding:14px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.05)}
+.card h3{margin:0;font:600 1rem var(--disp)}
+.url{margin:10px 0;padding:10px 12px;border-radius:10px;background:rgba(0,0,0,.4);border:1px solid var(--line);font:500 .78rem/1.5 var(--mono);color:#cfe9ff;word-break:break-all}
+.url mark{background:rgba(34,211,238,.2);color:#fff;border-radius:4px;padding:0 2px}
+.acts{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.warn{font-size:.78rem;color:#ffd9ad;margin:6px 0 0}
+.alts{margin-top:14px}
+.alts ul{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:6px}
+.alts li{display:flex;align-items:center;gap:8px}
+.alts li button.t{flex:1;min-width:0;text-align:left;padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.04);cursor:pointer;font:500 .85rem var(--body);display:flex;justify-content:space-between;gap:8px;align-items:center}
+.alts li button.t:hover{background:rgba(255,255,255,.1)}
+.alts li button.t.on{border-color:var(--c);background:rgba(34,211,238,.1)}
+.empty{margin-top:18px;padding:22px;border-radius:16px;border:1px dashed var(--line);text-align:center;color:var(--mute);font-size:.88rem}
+.empty b{display:block;font:600 1rem var(--disp);color:#fff;margin-bottom:4px}
+.list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.list li{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.04)}
+.list li.off .nm{opacity:.5;text-decoration:line-through}
+.list .nm{flex:1;min-width:0;font:500 .88rem var(--body);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.list .nm small{display:block;font:400 .68rem var(--mono);color:var(--dim);text-overflow:ellipsis;overflow:hidden}
+.ib{width:32px;height:32px;border-radius:9px;border:1px solid var(--line);background:rgba(255,255,255,.05);cursor:pointer;display:grid;place-items:center;font-size:.8rem;color:var(--mute)}
+.ib:hover{color:#fff;background:rgba(255,255,255,.14)}
+.ib[disabled]{opacity:.3;pointer-events:none}
+.sw{position:relative;width:40px;height:24px;flex:none}
+.sw input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer;z-index:1}
+.sw span{position:absolute;inset:0;border-radius:999px;background:rgba(255,255,255,.14);transition:background .25s}
+.sw span::after{content:"";position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .25s var(--ease)}
+.sw input:checked+span{background:var(--g)}
+.sw input:checked+span::after{transform:translateX(16px);background:#06070c}
+.sw input:focus-visible+span{outline:2px solid #fff;outline-offset:2px}
+.addf{margin-top:16px;display:grid;gap:8px;padding:14px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.04)}
+.addf label{font:600 .68rem var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+.addf input{width:100%;height:40px;padding:0 12px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.06);font:500 .85rem var(--mono);outline:0}
+.addf input:focus{border-color:var(--c)}
+.msg{min-height:1.2em;font-size:.8rem;color:var(--mute)}
+.msg.err{color:#ff9d9d}.msg.ok{color:var(--g)}
+.pcards{display:grid;gap:10px;margin-top:6px}
+.pcard{padding:14px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.04)}
+.pcard h3{margin:0 0 4px;font:600 .95rem var(--disp);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pcard p{margin:0;color:var(--mute);font-size:.84rem}
+.faq{display:grid;gap:8px}
+.faq details{border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.04);padding:10px 14px}
+.faq summary{cursor:pointer;font:600 .88rem var(--body)}
+.faq p{margin:8px 0 0;color:var(--mute);font-size:.84rem}
+.toast{position:absolute;left:50%;bottom:14px;transform:translate(-50%,20px);padding:8px 16px;border-radius:999px;background:#0e2a26;border:1px solid rgba(52,227,176,.5);color:var(--g);font:600 .8rem var(--body);opacity:0;pointer-events:none;transition:all .35s var(--ease);z-index:5}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+.appwrap{position:relative}
+
+/* below */
+.sec{padding:30px 0 70px}
+.kicker{margin:0 0 10px;font:600 .76rem var(--body);letter-spacing:.2em;text-transform:uppercase;color:var(--c)}
+h2.big{margin:0;font:700 clamp(1.8rem,4vw,2.8rem)/1.08 var(--disp);letter-spacing:-.03em}
+.grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr));margin-top:28px}
+.glass{padding:24px;border-radius:22px;background:var(--glass);border:1px solid var(--line);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),0 24px 60px -24px rgba(0,0,0,.7)}
+.glass h3{margin:0 0 6px;font:600 1.15rem var(--disp)}
+.glass p{margin:0;color:var(--mute);font-size:.94rem}
+.glass code{font:500 .82rem var(--mono);color:#cfe9ff}
+footer{padding:30px 0 60px;text-align:center;color:var(--dim);font-size:.84rem}
+footer a{color:#d6deef}
+footer p{margin:6px 0}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+@media(max-width:560px){.main{padding:14px}.row{flex-wrap:wrap}.row .btn{flex:0 0 auto}.sbox kbd{display:none}.app{grid-template-columns:54px minmax(0,1fr)}}
+</style>
+</head>
+<body>
+<div class="aurora" aria-hidden="true">
+  <div class="blob" style="--x:18%;--y:22%;--col:#22d3ee;--t:26s"><b></b></div>
+  <div class="blob" style="--x:84%;--y:30%;--col:#8b7bff;--t:32s"><b></b></div>
+  <div class="blob" style="--x:60%;--y:92%;--col:#ff6fb1;--t:38s"><b></b></div>
+  <div class="grain"></div>
+</div>
+
+<nav class="nav" aria-label="Page">
+  <a class="brand" href="#top">NeatBook</a>
+  <a class="l" href="#demo">Demo</a>
+  <a class="l" href="#about">About</a>
+  <a class="l" href="https://www.linkedin.com/in/gustavo-freitas-69b93910b/" rel="noopener" target="_blank">Gustavo</a>
+</nav>
+
+<main id="top" class="wrap">
+<section class="hero" id="demo">
+  <div>
+    <span class="eyebrow"><i></i>Interactive demo</span>
+    <h1>Every lookup,<br><span class="gw">one click away.</span></h1>
+    <p class="lede">How to use: just type, pick a tool, run it.</p>
+    <ol class="steps" aria-label="How to use">
+      <li><b>1</b>Type an indicator</li>
+      <li><b>2</b>Pick a tool</li>
+      <li><b>3</b>Run it</li>
+    </ol>
+    <p class="poc"><strong>Proof-of-concept demo of an early project (2022).</strong> Not the extension itself, no source here. Try <span class="kb">Alt</span>+<span class="kb">L</span> to jump to the search bar.</p>
+  </div>
+
+  <div class="stage">
+    <div class="win appwrap" role="application" aria-label="NeatBook popup demo">
+      <div class="bar" aria-hidden="true"><i></i><i></i><i></i><span>NeatBook (demo)</span></div>
+      <div class="app">
+        <div class="side" role="tablist" aria-label="Sections" aria-orientation="vertical" id="side">
+          <button role="tab" id="tab-home" data-v="home" aria-selected="true" aria-controls="v-home" title="Home" aria-label="Home"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></svg></button>
+          <button role="tab" id="tab-projects" data-v="projects" aria-selected="false" aria-controls="v-projects" title="Projects" aria-label="Projects"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg></button>
+          <button role="tab" id="tab-help" data-v="help" aria-selected="false" aria-controls="v-help" title="Help desk" aria-label="Help desk"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 114 2c-.9.6-1.5 1-1.5 2.2M12 17h.01"/></svg></button>
+          <span class="sp"></span>
+          <button role="tab" id="tab-settings" data-v="settings" aria-selected="false" aria-controls="v-settings" title="Settings" aria-label="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg></button>
+        </div>
+        <div class="main">
+          <!-- HOME -->
+          <section class="view" id="v-home" role="tabpanel" aria-labelledby="tab-home">
+            <h2>Search</h2>
+            <p class="sm">Paste an IP, domain, URL, hash or email.</p>
+            <form id="f" autocomplete="off" novalidate>
+              <div class="sbox">
+                <label class="sr" for="q">Indicator</label>
+                <input id="q" type="text" placeholder="e.g. 203.0.113.42" spellcheck="false" autocapitalize="off" autocomplete="off">
+                <kbd>Alt+L</kbd>
+              </div>
+              <div class="row">
+                <div class="sel"><label class="sr" for="tool">Tool</label><select id="tool"></select></div>
+                <button class="btn pri" type="submit" id="run">Run</button>
+              </div>
+            </form>
+            <div class="samples" id="samples"><span class="lbl">Try</span></div>
+            <div class="detect" id="detect" aria-live="polite"></div>
+            <div id="res"></div>
+          </section>
+          <!-- PROJECTS -->
+          <section class="view" id="v-projects" role="tabpanel" aria-labelledby="tab-projects" hidden>
+            <h2>Projects</h2>
+            <p class="sm">Pinned shortcuts (sample data, fictional).</p>
+            <div class="pcards">
+              <div class="pcard"><h3>Phishing triage <span class="chip c">sample</span></h3><p>Checklist: sender domain, link URL, attachment hash.</p></div>
+              <div class="pcard"><h3>Suspicious IP review <span class="chip c">sample</span></h3><p>Reputation, open ports, who owns the range.</p></div>
+              <div class="pcard"><h3>Weekly hunt notes <span class="chip c">sample</span></h3><p>Queries to re-run against your own SIEM.</p></div>
+            </div>
+          </section>
+          <!-- HELP -->
+          <section class="view" id="v-help" role="tabpanel" aria-labelledby="tab-help" hidden>
+            <h2>Help desk</h2>
+            <p class="sm">Quick answers.</p>
+            <div class="faq">
+              <details open><summary>What does it detect?</summary><p>IPv4, domains, URLs, MD5/SHA-1/SHA-256 hashes and email addresses. Defanged input like <code>hxxp://example[.]com</code> is cleaned up first.</p></details>
+              <details><summary>Does it send my indicator anywhere?</summary><p>No. Nothing leaves this page until you press Open, and then it goes straight to the tool you chose.</p></details>
+              <details><summary>How do I add my own tool?</summary><p>Settings, then add a name and a link containing <code>{query}</code>.</p></details>
+              <details><summary>What about SIEM and ticket links?</summary><p>They use placeholder hosts. Edit them in Settings to point at your own.</p></details>
+            </div>
+          </section>
+          <!-- SETTINGS -->
+          <section class="view" id="v-settings" role="tabpanel" aria-labelledby="tab-settings" hidden>
+            <h2>Search engines</h2>
+            <p class="sm">Toggle, reorder, delete or add. Saved in this browser.</p>
+            <ul class="list" id="elist"></ul>
+            <form class="addf" id="addf" novalidate>
+              <label for="an">Name</label>
+              <input id="an" placeholder="My lookup" maxlength="40">
+              <label for="at">Link template</label>
+              <input id="at" placeholder="https://example.com/search?q={query}" maxlength="300">
+              <div class="acts"><button class="btn pri sm" type="submit">Add engine</button><button class="btn sm" type="button" id="reset">Reset defaults</button></div>
+              <div class="msg" id="msg" role="status"></div>
+            </form>
+          </section>
+        </div>
+      </div>
+      <div class="toast" id="toast" role="status"></div>
+    </div>
+  </div>
+</section>
+
+<section class="sec" id="about">
+  <p class="kicker">About</p>
+  <h2 class="big">A small tool that kept <span class="gw">tabs tidy.</span></h2>
+  <div class="grid">
+    <div class="glass"><h3>Detect</h3><p>It recognises what you pasted and suggests the tools that make sense for it.</p></div>
+    <div class="glass"><h3>Show the link</h3><p>You see the exact URL before anything opens. Nothing navigates by itself.</p></div>
+    <div class="glass"><h3>Make it yours</h3><p>Add engines with a <code>{query}</code> template, including links into your own SIEM and ticketing system.</p></div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <p>Proof-of-concept demo of an early project (2022). Not the extension itself, no source here. All sample indicators are fictional.</p>
+  <p>Built by <a href="https://www.linkedin.com/in/gustavo-freitas-69b93910b/" target="_blank" rel="noopener">Gustavo Freitas</a></p>
+</footer>
+
+<script>
+(function(){
+"use strict";
+var $=function(s){return document.querySelector(s)};
+var KEY="neatbook-demo-v1";
+function T(name,map,extra){return Object.assign({id:name.toLowerCase().replace(/[^a-z0-9]+/g,"-"),name:name,on:true,map:map,custom:false},extra||{})}
+var DEFAULTS=[
+ T("VirusTotal",{ip:"https://www.virustotal.com/gui/ip-address/{query}",domain:"https://www.virustotal.com/gui/domain/{query}",url:"https://www.virustotal.com/gui/search/{query}",hash:"https://www.virustotal.com/gui/file/{query}"}),
+ T("urlscan",{ip:"https://urlscan.io/ip/{query}",domain:"https://urlscan.io/domain/{query}",url:"https://urlscan.io/search/#{query}"}),
+ T("Shodan",{ip:"https://www.shodan.io/host/{query}",domain:"https://www.shodan.io/search?query={query}"}),
+ T("AbuseIPDB",{ip:"https://www.abuseipdb.com/check/{query}"}),
+ T("MXToolbox",{ip:"https://mxtoolbox.com/SuperTool.aspx?action=blacklist%3a{query}",domain:"https://mxtoolbox.com/SuperTool.aspx?action=mx%3a{query}",email:"https://mxtoolbox.com/SuperTool.aspx?action=mx%3a{domain}"}),
+ T("WHOIS",{ip:"https://who.is/whois-ip/ip-address/{query}",domain:"https://who.is/whois/{query}"}),
+ T("AlienVault OTX",{ip:"https://otx.alienvault.com/indicator/ip/{query}",domain:"https://otx.alienvault.com/indicator/domain/{query}",hash:"https://otx.alienvault.com/indicator/file/{query}",url:"https://otx.alienvault.com/indicator/url/{query}"}),
+ T("Have I Been Pwned",{email:"https://haveibeenpwned.com/account/{query}"}),
+ T("Splunk (your SIEM)",{any:"https://your-splunk.example.com/en-US/app/search/search?q=search%20{query}"}),
+ T("ServiceNow (your tickets)",{any:"https://your-instance.service-now.com/nav_to.do?uri=incident_list.do%3Fsysparm_query%3Dshort_descriptionLIKE{query}"})
+];
+var tools=load();
+function clone(x){return JSON.parse(JSON.stringify(x))}
+function load(){try{var s=localStorage.getItem(KEY);if(s){var a=JSON.parse(s);if(Array.isArray(a)&&a.length)return a}}catch(e){}return clone(DEFAULTS)}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(tools))}catch(e){}}
+
+/* detection */
+function clean(s){return s.trim().replace(/^hxxp/i,"http").replace(/\[\.\]|\(\.\)|\{\.\}/g,".").replace(/\[:\]/g,":").replace(/\[@\]|\[at\]/gi,"@")}
+function detect(raw){
+  var s=clean(raw);if(!s)return null;
+  var m;
+  if(/^[a-z][a-z0-9+.-]*:\/\/\S+$/i.test(s)){try{var u=new URL(s);if(/^https?:$/.test(u.protocol))return{type:"url",v:s,host:u.hostname}}catch(e){}}
+  if(/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(s))return{type:"email",v:s,domain:s.split("@")[1]};
+  if((m=s.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/))&&m.slice(1).every(function(n){return +n<=255}))return{type:"ip",v:s};
+  if(/^[a-f0-9]+$/i.test(s)){var L={32:"MD5",40:"SHA-1",64:"SHA-256"};if(L[s.length])return{type:"hash",v:s.toLowerCase(),sub:L[s.length]}}
+  if(/^(?=.{4,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/i.test(s))return{type:"domain",v:s.toLowerCase()};
+  return{type:"unknown",v:s};
+}
+var LABEL={ip:"IP address",domain:"Domain",url:"URL",hash:"File hash",email:"Email",unknown:"Unknown"};
+function supports(t,d){return !!(d&&d.type!=="unknown"&&(t.map[d.type]||t.map.any))}
+function tpl(t,d){return t.map[d.type]||t.map.any||null}
+function build(t,d){
+  var p=tpl(t,d);if(!p)return null;
+  var val=d.type==="email"&&p.indexOf("{domain}")>-1?d.domain:d.v;
+  var enc=encodeURIComponent(val);
+  var full=p.replace("{domain}",enc).replace("{query}",enc);
+  return{url:full,enc:enc}
+}
+function isPh(u){try{var h=new URL(u).hostname;return /(^|\.)example\.(com|org|net)$/.test(h)||/your-instance\./.test(h)||/^your-/.test(h)}catch(e){return true}}
+
+/* UI */
+var q=$("#q"),sel=$("#tool"),detEl=$("#detect"),res=$("#res"),cur=null,pickedId=null;
+function enabled(){return tools.filter(function(t){return t.on})}
+function fillSelect(d){
+  var en=enabled(),keep=sel.value;
+  var good=en.filter(function(t){return supports(t,d)}),rest=en.filter(function(t){return !supports(t,d)});
+  sel.innerHTML="";
+  function add(arr,star){arr.forEach(function(t){var o=document.createElement("option");o.value=t.id;o.textContent=(star?"★ ":"")+t.name;sel.appendChild(o)})}
+  add(good,true);add(rest,false);
+  if(!en.length){var o=document.createElement("option");o.textContent="No tools enabled";o.value="";sel.appendChild(o)}
+  var want=pickedId&&en.some(function(t){return t.id===pickedId})?pickedId:(good[0]&&good[0].id)||keep;
+  if(want)sel.value=want;
+}
+function showDetect(){
+  detEl.textContent="";
+  if(!cur)return;
+  var c=document.createElement("span");c.className="chip "+(cur.type==="unknown"?"a":"g");
+  c.textContent=LABEL[cur.type]+(cur.sub?" · "+cur.sub:"")+" detected";detEl.appendChild(c);
+  if(cur.type==="unknown"){detEl.appendChild(document.createTextNode(" Try an IP, domain, URL, hash or email."));return}
+  var n=enabled().filter(function(t){return supports(t,cur)}).length;
+  detEl.appendChild(document.createTextNode(n+" tool"+(n===1?"":"s")+" fit"+(n===1?"s":"")+" (★ in the list)"));
+}
+function onInput(){
+  cur=detect(q.value);pickedId=null;fillSelect(cur);showDetect();
+  if(!q.value.trim()){res.innerHTML="";return}
+}
+function hl(url,enc){
+  var f=document.createDocumentFragment();var i=url.indexOf(enc);
+  if(!enc||i<0){f.appendChild(document.createTextNode(url));return f}
+  f.appendChild(document.createTextNode(url.slice(0,i)));var m=document.createElement("mark");m.textContent=enc;f.appendChild(m);
+  f.appendChild(document.createTextNode(url.slice(i+enc.length)));return f;
+}
+function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e}
+function run(){
+  res.innerHTML="";
+  if(!q.value.trim()){res.appendChild(emptyBox("Nothing to look up yet","Type an indicator or tap a sample above."));q.focus();return}
+  cur=detect(q.value);showDetect();
+  var t=tools.find(function(x){return x.id===sel.value&&x.on});
+  if(!t){res.appendChild(emptyBox("No tool selected","Enable a tool in Settings."));return}
+  pickedId=t.id;
+  var card=el("div","card");card.appendChild(el("h3",null,t.name));
+  var b=cur.type!=="unknown"?build(t,cur):null;
+  if(!b){
+    var why=cur.type==="unknown"?"That does not look like an indicator I know.":t.name+" has no "+LABEL[cur.type].toLowerCase()+" lookup. Try a ★ tool.";
+    card.appendChild(el("p","warn",why));res.appendChild(card);return;
+  }
+  var u=el("div","url");u.appendChild(hl(b.url,b.enc));u.setAttribute("aria-label","Link that would open");card.appendChild(u);
+  var a=el("div","acts");var ph=isPh(b.url);
+  var open=el("a","btn pri sm","Open in new tab ↗");
+  if(ph){open.setAttribute("aria-disabled","true");open.setAttribute("tabindex","-1");open.removeAttribute("href")}
+  else{open.href=b.url;open.target="_blank";open.rel="noopener noreferrer"}
+  a.appendChild(open);
+  var cp=el("button","btn sm","Copy link");cp.type="button";cp.onclick=function(){copy(b.url)};a.appendChild(cp);
+  card.appendChild(a);
+  if(ph)card.appendChild(el("p","warn","Placeholder host: replace it with your own in Settings. Open is off."));
+  else card.appendChild(el("p","warn","Opens a third-party site. Nothing is sent until you press Open."));
+  res.appendChild(card);
+  var others=enabled().filter(function(x){return supports(x,cur)});
+  if(others.length>1){
+    var al=el("div","alts");al.appendChild(el("span","lbl","Also fits"));var ul=el("ul");
+    others.forEach(function(x){var li=el("li");var bt=el("button","t"+(x.id===t.id?" on":""));bt.type="button";bt.appendChild(el("span",null,x.name));bt.appendChild(el("span","chip",x.id===t.id?"shown":"show link"));
+      bt.onclick=function(){sel.value=x.id;run()};li.appendChild(bt);ul.appendChild(li)});
+    al.appendChild(ul);res.appendChild(al);
+  }
+}
+function emptyBox(h,p){var d=el("div","empty");d.appendChild(el("b",null,h));d.appendChild(document.createTextNode(p));return d}
+var tt;function toast(m){var t=$("#toast");t.textContent=m;t.classList.add("on");clearTimeout(tt);tt=setTimeout(function(){t.classList.remove("on")},1800)}
+function copy(s){
+  var done=function(){toast("Link copied")};
+  try{if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(s).then(done,fb);return}}catch(e){}
+  fb();
+  function fb(){try{var ta=document.createElement("textarea");ta.value=s;ta.style.position="fixed";ta.style.opacity="0";document.body.appendChild(ta);ta.select();document.execCommand("copy");document.body.removeChild(ta);done()}catch(e){toast("Copy not available")}}
+}
+$("#f").addEventListener("submit",function(e){e.preventDefault();run()});
+sel.addEventListener("change",function(){pickedId=sel.value;if(q.value.trim())run()});
+q.addEventListener("input",onInput);
+
+/* samples */
+["203.0.113.42","login.example.com","https://example.com/invoice?id=7","d41d8cd98f00b204e9800998ecf8427e","analyst@example.com"].forEach(function(s){
+  var b=el("button","chip",s.length>24?s.slice(0,22)+"…":s);b.type="button";b.title=s;b.setAttribute("aria-label","Use sample "+s);
+  b.onclick=function(){setView("home");q.value=s;onInput();run();q.focus()};$("#samples").appendChild(b)
+});
+
+/* settings */
+var list=$("#elist");
+function renderList(){
+  list.innerHTML="";
+  tools.forEach(function(t,i){
+    var li=el("li",t.on?"":"off");
+    var sw=el("label","sw");var cb=document.createElement("input");cb.type="checkbox";cb.checked=t.on;cb.setAttribute("aria-label","Enable "+t.name);
+    cb.onchange=function(){t.on=cb.checked;save();renderList();refresh()};sw.appendChild(cb);sw.appendChild(el("span"));li.appendChild(sw);
+    var nm=el("div","nm",t.name);var first=Object.keys(t.map)[0];nm.appendChild(el("small",null,t.custom?t.map.any:(Object.keys(t.map).join(" / "))));li.appendChild(nm);
+    var up=el("button","ib","↑");up.type="button";up.setAttribute("aria-label","Move "+t.name+" up");up.disabled=i===0;up.onclick=function(){mv(i,-1)};
+    var dn=el("button","ib","↓");dn.type="button";dn.setAttribute("aria-label","Move "+t.name+" down");dn.disabled=i===tools.length-1;dn.onclick=function(){mv(i,1)};
+    var rm=el("button","ib","✕");rm.type="button";rm.setAttribute("aria-label","Delete "+t.name);rm.onclick=function(){tools.splice(i,1);save();renderList();refresh();setMsg(t.name+" removed.","ok")};
+    li.appendChild(up);li.appendChild(dn);li.appendChild(rm);list.appendChild(li);
+  });
+  if(!tools.length)list.appendChild(emptyBox("No engines","Add one below or reset defaults."));
+}
+function mv(i,d){var j=i+d;if(j<0||j>=tools.length)return;var x=tools.splice(i,1)[0];tools.splice(j,0,x);save();renderList();refresh()}
+function refresh(){fillSelect(cur);showDetect();if(q.value.trim()&&res.firstChild)run()}
+function setMsg(m,c){var e=$("#msg");e.textContent=m;e.className="msg "+(c||"")}
+$("#addf").addEventListener("submit",function(e){
+  e.preventDefault();
+  var n=$("#an").value.trim(),t=$("#at").value.trim();
+  if(!n)return setMsg("Give it a name.","err");
+  if(t.indexOf("{query}")<0)return setMsg("The link needs {query} where the indicator goes.","err");
+  try{var u=new URL(t.replace("{query}","x"));if(!/^https?:$/.test(u.protocol))throw 0}catch(x){return setMsg("Use a full http(s) link.","err")}
+  var id="c-"+Date.now().toString(36);
+  tools.push({id:id,name:n,on:true,custom:true,map:{any:t}});save();renderList();refresh();
+  $("#an").value="";$("#at").value="";setMsg("Added "+n+". It now shows up on Home.","ok");
+});
+$("#reset").addEventListener("click",function(){tools=clone(DEFAULTS);save();renderList();refresh();setMsg("Defaults restored.","ok")});
+
+/* views */
+var tabs=[].slice.call(document.querySelectorAll("#side button"));
+function setView(v){
+  tabs.forEach(function(b){var on=b.dataset.v===v;b.setAttribute("aria-selected",on);b.tabIndex=on?0:-1});
+  ["home","projects","help","settings"].forEach(function(n){$("#v-"+n).hidden=n!==v});
+}
+tabs.forEach(function(b,i){
+  b.onclick=function(){setView(b.dataset.v)};
+  b.addEventListener("keydown",function(e){
+    var k=e.key,n=null;if(k==="ArrowDown"||k==="ArrowRight")n=(i+1)%tabs.length;else if(k==="ArrowUp"||k==="ArrowLeft")n=(i-1+tabs.length)%tabs.length;
+    if(n!==null){e.preventDefault();tabs[n].focus();setView(tabs[n].dataset.v)}
+  });
+});
+document.addEventListener("keydown",function(e){
+  if(e.altKey&&!e.ctrlKey&&!e.metaKey&&(e.key==="l"||e.key==="L"||e.code==="KeyL")){e.preventDefault();setView("home");q.focus();q.select()}
+});
+
+setView("home");renderList();fillSelect(null);showDetect();
+q.value="203.0.113.42";onInput();run();
+})();
+</script>
+</body>
+</html>
